@@ -7,7 +7,7 @@ import PatrickLogo from './patrick-logo.png';
 
 
 interface IState {
-	currentMeme: any,
+	currentMeme: any, // specifies what the current selected meme is
 	memes: any[],
 	open: boolean,
 	uploadFileList: any,
@@ -23,6 +23,10 @@ class App extends React.Component<{}, IState> {
 			uploadFileList: null
 		}     	
 		this.selectNewMeme = this.selectNewMeme.bind(this)
+		this.fetchMemes = this.fetchMemes.bind(this)
+		this.fetchMemes("")
+		this.handleFileUpload = this.handleFileUpload.bind(this)
+		this.uploadMeme = this.uploadMeme.bind(this)
 	}
 
 	public render() {
@@ -41,11 +45,11 @@ class App extends React.Component<{}, IState> {
 						<MemeDetail currentMeme={this.state.currentMeme} />
 					</div>
 					<div className="col-5">
-						<MemeList memes={this.state.memes} selectNewMeme={this.selectNewMeme} searchByTag={this.methodNotImplemented}/>
+						<MemeList memes={this.state.memes} selectNewMeme={this.selectNewMeme} searchByTag={this.fetchMemes}/>
 					</div>
 				</div>
 			</div>
-			<Modal open={open} onClose={this.onCloseModal}>
+			<Modal open={open} onClose={this.onCloseModal}> 
 				<form>
 					<div className="form-group">
 						<label>Meme Title</label>
@@ -59,34 +63,92 @@ class App extends React.Component<{}, IState> {
 					</div>
 					<div className="form-group">
 						<label>Image</label>
-						<input type="file" onChange={this.methodNotImplemented} className="form-control-file" id="meme-image-input" />
+						<input type="file" onChange={this.handleFileUpload} className="form-control-file" id="meme-image-input" />
 					</div>
 
-					<button type="button" className="btn" onClick={this.methodNotImplemented}>Upload</button>
+					<button type="button" className="btn" onClick={this.uploadMeme}>Upload</button>
 				</form>
 			</Modal>
 		</div>
 		);
 	}
 
-	private methodNotImplemented() {
-		alert("Method not implemented")
-	}
-
-	// Modal open
+	// Modal (dialogue box) open
 	private onOpenModal = () => {
-		this.setState({ open: true });
+		this.setState({ open: true }); // opens modal
 	  };
 	
-	// Modal close
+	// Modal (dialogue box) close
 	private onCloseModal = () => {
-		this.setState({ open: false });
+		this.setState({ open: false }); // closes modal
 	};
 	
 	// Change selected meme
 	private selectNewMeme(newMeme: any) {
 		this.setState({
 			currentMeme: newMeme
+		})
+	}
+
+	// tag as a parameter... (TBC)
+	private fetchMemes(tag: any) {
+		let url = "http://phase2apitest.azurewebsites.net/api/meme"
+		if (tag !== "") {
+			url += "/tag?=" + tag
+		}
+		fetch(url, {
+			method: 'GET'
+		})
+		.then(res => res.json())
+		.then(json => {
+			let currentMeme = json[0]
+			if (currentMeme === undefined) { // if database is empty making it undefined
+				currentMeme = {"id":0, "title":"No memes (╯°□°）╯︵ ┻━┻","url":"","tags":"try a different tag","uploaded":"","width":"0","height":"0"}
+			}
+			this.setState({
+				currentMeme,
+				memes: json
+			})
+		});
+	}
+
+	// handling when you add the meme
+	private handleFileUpload(fileList: any) {
+		this.setState({
+			uploadFileList: fileList.target.files
+		})
+	}
+
+	private uploadMeme() {
+		const titleInput = document.getElementById("meme-title-input") as HTMLInputElement
+		const tagInput = document.getElementById("meme-tag-input") as HTMLInputElement
+		const imageFile = this.state.uploadFileList[0]
+	
+		if (titleInput === null || tagInput === null || imageFile === null) {
+			return; // if null, don't do the upload
+		}
+	
+		const title = titleInput.value
+		const tag = tagInput.value
+		const url = "http://phase2apitest.azurewebsites.net/api/meme/upload"
+	
+		const formData = new FormData()
+		formData.append("Title", title)
+		formData.append("Tags", tag)
+		formData.append("image", imageFile)
+	
+		fetch(url, { 
+			body: formData,
+			headers: {'cache-control': 'no-cache'},
+			method: 'POST'
+		})
+		.then((response : any) => { 
+			if (!response.ok) {
+				// Error State
+				alert(response.statusText)
+			} else {
+				location.reload()
+			}
 		})
 	}
 }

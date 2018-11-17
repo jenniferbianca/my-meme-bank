@@ -16,6 +16,7 @@ export default class MemeDetail extends React.Component<IProps, IState> {
         this.state = {
             open: false
         }
+        this.updateMeme = this.updateMeme.bind(this)
 
     }
 
@@ -37,7 +38,7 @@ export default class MemeDetail extends React.Component<IProps, IState> {
                 <div className="row meme-done-button">
                     <div className="btn btn-primary btn-action" onClick={this.downloadMeme.bind(this, currentMeme.url)}>Download </div>
                     <div className="btn btn-primary btn-action" onClick={this.onOpenModal}>Edit </div>
-                    <div className="btn btn-primary btn-action" onClick={this.methodNotImplemented.bind(this, currentMeme.id)}>Delete </div>
+                    <div className="btn btn-primary btn-action" onClick={this.deleteMeme.bind(this, currentMeme.id)}>Delete </div>
                 </div>
                 <Modal open={open} onClose={this.onCloseModal}>
                     <form>
@@ -51,29 +52,77 @@ export default class MemeDetail extends React.Component<IProps, IState> {
                             <input type="text" className="form-control" id="meme-edit-tag-input" placeholder="Enter Tag"/>
                             <small className="form-text text-muted">Tag is used for search</small>
                         </div>
-                        <button type="button" className="btn" onClick={this.methodNotImplemented}>Save</button>
+                        <button type="button" className="btn" onClick={this.updateMeme}>Save</button>
                     </form>
                 </Modal>
             </div>
 		);
     }
 
-    // Modal Open
+    // Modal Open (private method)
     private onOpenModal = () => {
         this.setState({ open: true });
 	  };
     
-    // Modal Close
+    // Modal Close (private method)
     private onCloseModal = () => {
 		this.setState({ open: false });
     };
-    
-    private methodNotImplemented() {
-		alert("Method not implemented")
-	}
 
     // Open meme image in new tab
     private downloadMeme(url: any) {
         window.open(url);
+    }
+
+    private updateMeme(){
+        const titleInput = document.getElementById("meme-edit-title-input") as HTMLInputElement
+        const tagInput = document.getElementById("meme-edit-tag-input") as HTMLInputElement
+    
+        if (titleInput === null || tagInput === null) {
+            return; // if none don't run it
+        }
+    
+        const currentMeme = this.props.currentMeme
+        const url = "http://phase2apitest.azurewebsites.net/api/meme/" + currentMeme.id
+        const updatedTitle = titleInput.value // get the value for the updated title
+        const updatedTag = tagInput.value // get the value for the updated tag
+        fetch(url, {
+            body: JSON.stringify({ // in JSON format
+                "height": currentMeme.height,
+                "id": currentMeme.id,
+                "tags": updatedTag,
+                "title": updatedTitle,
+                "uploaded": currentMeme.uploaded,
+                "url": currentMeme.url,
+                "width": currentMeme.width
+            }),
+            headers: {'cache-control': 'no-cache','Content-Type': 'application/json'},
+            method: 'PUT'
+        })
+        .then((response : any) => {
+            if (!response.ok) {
+                // Error State, otherwise
+                alert(response.statusText + " " + url)
+            } else { // if everything's good, reload
+                location.reload()
+            }
+        })
+    }
+
+    private deleteMeme(id: any) { // no need to bind because not setting the state of anything
+        const url = "http://phase2apitest.azurewebsites.net/api/meme/" + id
+    
+        fetch(url, {
+            method: 'DELETE'
+        })
+        .then((response : any) => {
+            if (!response.ok) {
+                // Error Response
+                alert(response.statusText)
+            }
+            else {
+                location.reload()
+            }
+        })
     }
 }
